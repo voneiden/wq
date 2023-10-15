@@ -7,11 +7,11 @@
 (source
  (github username/reponame))
 
-(authors "Author Name")
+(authors "Matti Eiden")
 
-(maintainers "Maintainer Name")
+(maintainers "Matti Eiden")
 
-(license LICENSE)
+(license MIT)
 
 (documentation https://url/to/documentation)
 
@@ -19,7 +19,7 @@
  (name wq)
  (synopsis "A short synopsis")
  (description "A longer description")
- (depends ocaml dune caqti caqti-lwt caqti-driver-postgresql ppx_rapper cmdliner)
+ (depends ocaml dune caqti caqti-lwt caqti-driver-postgresql ppx_rapper ppx_rapper_lwt cmdliner)
  (tags
   (topics "to describe" your project)))
 
