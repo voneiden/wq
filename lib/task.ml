@@ -1,21 +1,21 @@
-type model =
-  { id : int;
-    title: string;
-    priority: int;
-    deadline: Ptime.t option;
-    score: float;
-  }
+type model = {
+  id : int;
+  title : string;
+  priority : int;
+  deadline : Ptime.t option;
+  score : float;
+}
 
-  let print_task (row : model) = 
-    match row with 
-      | {id; title; score; _} -> Printf.printf "Returned row id %i with title \"%s\" and score %f\n" id title score
-    
-  
+let print_task (row : model) =
+  match row with
+  | { id; title; score; _ } ->
+      Printf.printf "Returned row id %i with title \"%s\" and score %f\n" id
+        title score
 
-  let list_with_score =
-    [%rapper
-      get_many
-        {sql|
+let list_with_score =
+  [%rapper
+    get_many
+      {sql|
         WITH cte AS (
           SELECT 
             id, 
@@ -43,5 +43,4 @@ type model =
         FROM cte
         ORDER BY score DESC
         |sql}
-        record_out]
-  
+      record_out]
