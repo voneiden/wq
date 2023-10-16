@@ -6,6 +6,31 @@ type model = {
   score : float;
 }
 
+
+let collect_and_sort_deadlines(tasks : model list) =
+  tasks
+  |> List.filter_map (fun task -> 
+    match task.deadline with 
+      | Some deadline -> Some (task.id, deadline)
+      | _ -> None
+      )  
+  |> List.sort (fun t1 t2 ->
+      match (t1, t2) with 
+      | ((_, d1), (_, d2)) -> Ptime.compare d1 d2 
+  )
+  |> List.rev
+  |> List.iter (fun (id, deadline) -> Printf.printf "Hello %i @ %s\n" id (Ptime.to_rfc3339 deadline))
+  
+let sorted_by_deadline(tasks : model list) =
+  tasks
+  |> List.filter (fun task -> task.deadline <> None)  
+  |> List.sort (fun t1 t2 -> 
+      match (t1.deadline, t2.deadline) with 
+      | (Some d1, Some d2) -> Ptime.compare d1 d2
+      | (_, _) -> 0
+    )
+  
+
 let print_task (row : model) =
   match row with
   | { id; title; score; _ } ->
