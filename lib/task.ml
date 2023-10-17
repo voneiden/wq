@@ -1,35 +1,45 @@
+module Calendar = CalendarLib.Calendar
+module Period = CalendarLib.Period
+
 type model = {
   id : int;
   title : string;
   priority : int;
-  deadline : Ptime.t option;
+  deadline : Calendar.t option;
   score : float;
 }
 
+let determine_start_times (tasks : (int * Calendar.t) list) =
+  match tasks with
+  | [] -> []
+  | hd :: _ -> (
+      match hd with
+      | _, first_deadline -> (
+          let results =
+            List.fold_left_map
+              (fun last_end (id, deadline) ->
+                let new_end = min last_end deadline in
+                let start = Calendar.rem new_end (Calendar.Period.hour 1) in
+                (start, (id, start, deadline)))
+              first_deadline tasks
+          in
+          match results with _, foo -> foo))
 
-let collect_and_sort_deadlines(tasks : model list) =
+let collect_and_sort_deadlines (tasks : model list) =
   tasks
-  |> List.filter_map (fun task -> 
-    match task.deadline with 
-      | Some deadline -> Some (task.id, deadline)
-      | _ -> None
-      )  
+  |> List.filter_map (fun task ->
+         match task.deadline with
+         | Some deadline -> Some (task.id, deadline)
+         | _ -> None)
   |> List.sort (fun t1 t2 ->
-      match (t1, t2) with 
-      | ((_, d1), (_, d2)) -> Ptime.compare d1 d2 
-  )
-  |> List.rev
-  |> List.iter (fun (id, deadline) -> Printf.printf "Hello %i @ %s\n" id (Ptime.to_rfc3339 deadline))
-  
-let sorted_by_deadline(tasks : model list) =
-  tasks
-  |> List.filter (fun task -> task.deadline <> None)  
-  |> List.sort (fun t1 t2 -> 
-      match (t1.deadline, t2.deadline) with 
-      | (Some d1, Some d2) -> Ptime.compare d1 d2
-      | (_, _) -> 0
-    )
-  
+         match (t1, t2) with (_, d1), (_, d2) -> Calendar.compare d1 d2)
+  |> List.rev |> determine_start_times
+  |> List.iter (fun (id, start, deadline) ->
+         Printf.printf "Hello X %i @ %s --> %s\n" id
+           (CalendarLib.Printer.Calendar.to_string start)
+           (CalendarLib.Printer.Calendar.to_string deadline))
+
+(* Printf.printf "Hello %i @ %s\n" id (Ptime.to_rfc3339 deadline)) *)
 
 let print_task (row : model) =
   match row with
@@ -57,7 +67,7 @@ let list_with_score =
           @int{id}, 
           @string{title}, 
           @int{priority}, 
-          @ptime?{deadline}, 
+          @ctime?{deadline}, 
           p_factor * age +
             CASE
               WHEN ttl IS NOT NULL THEN 

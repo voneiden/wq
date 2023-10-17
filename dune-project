@@ -19,7 +19,7 @@
  (name wq)
  (synopsis "A short synopsis")
  (description "A longer description")
- (depends ocaml dune caqti caqti-lwt caqti-driver-postgresql ppx_rapper ppx_rapper_lwt cmdliner)
+ (depends ocaml dune calendar caqti caqti-lwt caqti-driver-postgresql caqti-type-calendar ppx_rapper ppx_rapper_lwt cmdliner)
  (tags
   (topics "to describe" your project)))
 
