@@ -5,7 +5,12 @@ wq is a command line tool for quickly saving and querying todo
 tasks in a postgres database. It ranks tasks dynamically based 
 on priority, age and optional deadlines. 
 
-## The ranking 
+## About ranking 
+Task ranking is based on a score. The base score is formed by priority
+and age of the task. The score can be further increased by an impending 
+deadline. Additionally tasks with deadlines will override ranking
+if it is necessary to do so to ensure the task is completed within the deadline.
+
 ### Priority
 Each task has a priority (low [0], default [1], high [2]) which is converted 
 into a priority factor `pow(pow(2, priority), 2)` yielding the following factors:
