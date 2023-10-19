@@ -13,6 +13,6 @@ let () =
   | Error err ->
       print_endline "Oops, we encountered an error!";
       print_endline (Caqti_error.show err)
-  | Ok rows -> 
-    List.iter Task.print_task rows;
-    Task.collect_and_sort_deadlines rows;
+  | Ok rows ->
+      List.iter Task.print_task rows;
+      Task.print_most_important rows
