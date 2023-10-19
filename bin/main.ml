@@ -14,5 +14,7 @@ let () =
       print_endline "Oops, we encountered an error!";
       print_endline (Caqti_error.show err)
   | Ok rows ->
-      List.iter Task.print_task rows;
-      Task.print_most_important rows
+      let tasks = Task.to_tasks rows
+      in
+      List.iter Task.print_task tasks;
+      Task.print_most_important tasks

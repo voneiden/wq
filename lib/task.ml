@@ -2,14 +2,17 @@ module Calendar = CalendarLib.Calendar
 module Date = CalendarLib.Date
 module Period = CalendarLib.Period
 module Time = CalendarLib.Time
+module Printer = CalendarLib.Printer
 
-type model = {
+type db_task = {
   id : int;
   title : string;
   priority : int;
   deadline : Calendar.t option;
   score : float;
 }
+
+type task = { db_task : db_task; start_time : Calendar.t option }
 
 let set_calendar_time (time : Calendar.Time.t) (calendar : Calendar.t) =
   Calendar.make (Calendar.year calendar)
@@ -62,82 +65,113 @@ let%test _ =
     (Calendar.make 2023 10 15 23 0 0)
   = Calendar.make 2023 10 12 12 0 0
 
-(*
-let determine_start_times (tasks : (int * Calendar.t) list) =
-  match tasks with
-  | [] -> []
-  | hd :: _ -> (
-      match hd with
-      | _, first_deadline -> (
-          let results =
-            List.fold_left_map
-              (fun external_deadline (id, deadline) ->
-                let active_deadline = min external_deadline deadline in
-                let start =
-                  Calendar.rem active_deadline (Calendar.Period.hour 1)
-                in
-                (start, (id, start, deadline)))
-              first_deadline tasks
-          in
-          match results with _, foo -> foo))
-*)
+let deadline_or_override (deadline : Calendar.t option)
+    (override : Calendar.t option) =
+  match (deadline, override) with
+  | Some deadline, Some override -> Some (min deadline override)
+  | Some deadline, None -> Some deadline
+  | _ -> None
 
-let collect_and_sort_deadlines (tasks : model list) =
-  tasks
-  |> List.filter_map (fun task ->
-         match task.deadline with
-         | Some deadline -> Some (task.id, deadline)
-         | _ -> None)
-  |> List.sort (fun t1 t2 ->
-         match (t1, t2) with (_, d1), (_, d2) -> Calendar.compare d1 d2)
+let determine_start_time (end_time : Calendar.t) : Calendar.t =
+  subtract_work_time (Time.make 8 0 0)
+    (Time.make 16 0 0) (* TODO make configurable*)
+    (Calendar.Period.make 0 0 0 1 0 0) (* TODO: make dynamic*)
+    end_time
+
+let sort_optional (getter : 'a -> 'b option) (compare : 'b -> 'b -> int)
+    (o1 : 'a) (o2 : 'a) : int =
+  match (getter o1, getter o2) with
+  | Some d1, Some d2 -> compare d1 d2
+  | Some _, None -> 1
+  | None, Some _ -> -1
+  | None, None -> 0
+
+let select_earliest_start_time (tasks : task list) : task option =
+  let start_tasks =
+    tasks
+    |> List.filter (fun task -> Option.is_some task.start_time)
+    |> List.sort (sort_optional (fun task -> task.start_time) Calendar.compare)
+  in
+  match start_tasks with hd :: _ -> Some hd | _ -> None
+
+let task_factory (hour : int) =
+  {
+    start_time = Some (Calendar.make 2023 10 20 hour 0 0);
+    db_task =
+      { score = 0.0; deadline = None; priority = 0; id = 1; title = "test" };
+  }
+
+let%test _ = select_earliest_start_time [] = None
+
+let%test _ =
+  select_earliest_start_time
+    [ task_factory 12; task_factory 10; task_factory 14 ]
+  = Some (task_factory 10)
+
+let select_most_important (now : Calendar.t) (tasks : task list) : task option =
+  let earliest_start_time = select_earliest_start_time tasks in
+  match earliest_start_time with
+  | Some { start_time = Some start_time; _ } when start_time < now ->
+      earliest_start_time
+  | _ -> (
+      match
+        tasks
+        |> List.sort (fun t1 t2 ->
+               Float.compare t1.db_task.score t2.db_task.score)
+        |> List.rev
+      with
+      | hd :: _ -> Some hd
+      | _ -> None)
+
+let to_tasks (db_tasks : db_task list) : task list =
+  db_tasks
+  |> List.sort
+       (sort_optional (fun db_task -> db_task.deadline) Calendar.compare)
   |> List.rev
+  |> List.fold_left_map
+       (fun previous_start db_task ->
+         let start_time =
+           Option.map determine_start_time
+             (deadline_or_override db_task.deadline previous_start)
+         in
+         (start_time, { db_task; start_time }))
+       None
+  |> snd
 
-(* Given a list of (id, deadline) descending deadline pairs,
-   return a list of (id, start_time) ascending start_time pairs *)
-let determine_start_times (deadlines : (int * Calendar.t) list) :
-    (int * Calendar.t) list =
-  match deadlines with
-  | [] -> []
-  | hd :: _ -> (
-      match hd with
-      | _, first_deadline ->
-          List.fold_left_map
-            (fun max_deadline (id, deadline) ->
-              let start_time =
-                subtract_work_time (Time.make 8 0 0)
-                  (Time.make 16 0 0) (* TODO make configurable*)
-                  (Calendar.Period.make 0 0 0 1 0 0) (* TODO: make dynamic*)
-                  (min max_deadline deadline)
-              in
-              (start_time, (id, start_time)))
-            first_deadline deadlines
-          |> snd |> List.rev)
-(*
-let deadline_priority_override (tasks : model list) : int option =
-  match collect_and_sort_deadlines tasks with
-  | [] -> None 
-  | hd :: tl ->
-    List.fold_left (fun acc (id ,deadline) -> acc) hd tl 
-*)
+let db_task_factory (hour : int) =
+  {
+    id = 1;
+    deadline = Some (Calendar.make 2023 10 20 hour 0 0);
+    title = "";
+    priority = 0;
+    score = 0.0;
+  }
 
-let select_most_important (now : Calendar.t) (tasks : model list) : model option
-    =
-  let deadlines = collect_and_sort_deadlines tasks in
-  let start_times = determine_start_times deadlines in
-  match start_times with
-  | (id, start_time) :: _ when start_time <= now ->
-      List.find_opt (fun task -> task.id = id) tasks
-  | _ -> ( match tasks with [] -> None | tl :: _ -> Some tl)
+let%test _ = to_tasks [] = []
 
-let print_most_important (tasks : model list) =
+let%test _ =
+  to_tasks [ db_task_factory 10 ]
+  = [
+      {
+        start_time = Some (Calendar.make 2023 10 20 9 0 0);
+        db_task = db_task_factory 10;
+      };
+    ]
+
+let print_most_important (tasks : task list) =
   match select_most_important (Calendar.now ()) tasks with
-  | Some { id; title; _ } ->
+  | Some { db_task = { id; title; _ }; _ } ->
       Printf.printf "The most important task (id=%i): %s" id title
   | None -> Printf.printf "Nothing to do!"
 
-let print_task (row : model) =
+let print_task (row : task) =
   match row with
-  | { id; title; score; _ } ->
+  | { db_task = { id; title; score; _ }; start_time = Some start_time } ->
+      Printf.printf
+        "Returned row id %i with title \"%s\" and score %f -- start at %s\n" id
+        title score
+        (Printer.CalendarPrinter.to_string start_time)
+  | { db_task = { id; title; score; _ }; _ } ->
       Printf.printf "Returned row id %i with title \"%s\" and score %f\n" id
         title score
 
