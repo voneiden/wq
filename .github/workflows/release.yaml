@@ -1,6 +1,7 @@
 name: WQ Build
 on:
-  - push
+  push:
+    branches: [main]
 
 jobs:
   build:
@@ -56,4 +57,4 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: ${{ matrix.os }}-${{ matrix.ocaml-version }}-${{ env.FILE_NAME }}
-          path: _dist/${{ env.FILE_NAME }}
+          path: dist/${{ env.FILE_NAME }}

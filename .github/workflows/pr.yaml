@@ -1,7 +1,7 @@
 name: WQ Review
 on:
-  - pull_request
-  - push
+  pull_request:
+    branches: [main]
 
 jobs:
   build:
@@ -32,11 +32,6 @@ jobs:
 
       - run: opam exec -- dune runtest
 
-      - name: Upload the build artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: ${{ matrix.os }}-${{ matrix.ocaml-version }}-world.exe
-          path: _build/default/world.exe
 
   lint-doc:
     runs-on: ubuntu-latest
@@ -44,10 +39,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Use OCaml 4.13.x
+      - name: Use OCaml 4.14.x
         uses: ocaml/setup-ocaml@v2
         with:
-          ocaml-compiler: 4.13.x
+          ocaml-compiler: 4.14.x
           dune-cache: true
 
       - name: Lint doc
@@ -59,10 +54,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Use OCaml 4.13.x
+      - name: Use OCaml 4.14.x
         uses: ocaml/setup-ocaml@v2
         with:
-          ocaml-compiler: 4.13.x
+          ocaml-compiler: 4.14.x
           dune-cache: true
 
       - name: Lint fmt
