@@ -1,0 +1,59 @@
+name: WQ Build
+on:
+  - push
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+          - windows-latest
+        ocaml-compiler:
+          - 4.14.x
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Use OCaml ${{ matrix.ocaml-compiler }}
+        uses: ocaml/setup-ocaml@v2
+        with:
+          ocaml-compiler: ${{ matrix.ocaml-compiler }}
+
+      - run: opam install . --deps-only --with-doc --with-test
+
+      - run: opam exec -- dune build
+
+      - run: opam exec -- dune runtest
+
+      - name: Compress on unix
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
+        run: |
+          mkdir -p dist/wq
+          cp _build/default/bin/main.exe  dist/wq/wq
+          cd dist
+          tar -cf wq.tar wq
+          gzip wq.tar 
+          echo "FILE_NAME=wq.tar.gz" >> $GITHUB_ENV
+
+      - name: Compress on windows
+        if: matrix.os == 'windows-latest'
+        run: |
+          mkdir dist\wq
+          copy _build\default\bin\main.exe dist\wq\wq
+
+          # Compress using PowerShell's Compress-Archive
+          cd dist
+          Compress-Archive -Path wq -DestinationPath wq.zip
+          echo "FILE_NAME=wq.zip" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Upload the build artifact 
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.os }}-${{ matrix.ocaml-version }}-${{ env.FILE_NAME }}
+          path: _dist/${{ env.FILE_NAME }}
