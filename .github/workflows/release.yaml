@@ -33,10 +33,11 @@ jobs:
 
       - name: Extract Git Tag or Commit ID
         run: |
-          if [ -n "${GITHUB_REF##refs/tags/}" ]; then
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
             echo "GIT_REF=${GITHUB_REF##refs/tags/}" >> $GITHUB_ENV
           else
-            echo "GIT_REF=${GITHUB_SHA:0:7}" >> $GITHUB_ENV
+            COMMIT_ID=$(git rev-parse --short HEAD)
+            echo "GIT_REF=${COMMIT_ID}" >> $GITHUB_ENV
           fi
 
 
