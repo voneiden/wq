@@ -42,15 +42,17 @@ jobs:
 
 
       - name: Compress on unix
+        env:
+          REF: ${{GIT_REF}}
         run: |
           mkdir -p dist/wq
           cp _build/default/bin/main.exe  dist/wq/wq
           cp _build/default/LICENSE dist/wq/
           cp _build/default/README.md dist/wq/
           cd dist
-          tar -cf "wq-${GIT_REF}.tar" wq
-          gzip "wq-{GIT_REF}.tar ""
-          echo "FILE_NAME=wq-${GIT_REF}.tar.gz" >> $GITHUB_ENV
+          tar -cf "wq-${REF}.tar" wq
+          gzip "wq-{REF}.tar"
+          echo "FILE_NAME=wq-${REF}.tar.gz" >> $GITHUB_ENV
 
       - name: Upload the build artifact 
         uses: actions/upload-artifact@v2
