@@ -32,12 +32,12 @@ jobs:
       - run: opam exec -- dune runtest
 
       - name: Extract Git Tag or Commit ID
-          run: |
-            if [ -n "${GITHUB_REF##refs/tags/}" ]; then
-              echo "GIT_REF=${GITHUB_REF##refs/tags/}" >> $GITHUB_ENV
-            else
-              echo "GIT_REF=${GITHUB_SHA:0:7}" >> $GITHUB_ENV
-            fi
+        run: |
+          if [ -n "${GITHUB_REF##refs/tags/}" ]; then
+            echo "GIT_REF=${GITHUB_REF##refs/tags/}" >> $GITHUB_ENV
+          else
+            echo "GIT_REF=${GITHUB_SHA:0:7}" >> $GITHUB_ENV
+          fi
 
 
       - name: Compress on unix
