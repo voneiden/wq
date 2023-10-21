@@ -43,7 +43,7 @@ jobs:
 
       - name: Compress on unix
         env:
-          REF: ${{GIT_REF}}
+          REF: ${{env.GIT_REF}}
         run: |
           mkdir -p dist/wq
           cp _build/default/bin/main.exe  dist/wq/wq
