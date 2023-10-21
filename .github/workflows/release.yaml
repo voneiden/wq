@@ -51,7 +51,7 @@ jobs:
           cp _build/default/README.md dist/wq/
           cd dist
           tar -cf "wq-${REF}.tar" wq
-          gzip "wq-{REF}.tar"
+          gzip "wq-${REF}.tar"
           echo "FILE_NAME=wq-${REF}.tar.gz" >> $GITHUB_ENV
 
       - name: Upload the build artifact 
