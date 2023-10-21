@@ -3,3 +3,4 @@
 %uri=https://github.com/voneiden/wq/
 
 0001_initial 2023-10-11T21:43:23Z Matti Eiden <snaipperi@gmail.com> # Initial schema
+0002_estimate 2023-10-21T21:55:22Z Matti Eiden <snaipperi@gmail.com> # This adds an estimate to the task table
