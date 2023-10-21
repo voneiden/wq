@@ -11,7 +11,6 @@ jobs:
         os:
           - macos-latest
           - ubuntu-latest
-          - windows-latest
         ocaml-compiler:
           - 4.14.x
 
@@ -32,26 +31,25 @@ jobs:
 
       - run: opam exec -- dune runtest
 
+    - name: Extract Git Tag or Commit ID
+        run: |
+          if [ -n "${GITHUB_REF##refs/tags/}" ]; then
+            echo "GIT_REF=${GITHUB_REF##refs/tags/}" >> $GITHUB_ENV
+          else
+            echo "GIT_REF=${GITHUB_SHA:0:7}" >> $GITHUB_ENV
+          fi
+
+
       - name: Compress on unix
-        if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
         run: |
           mkdir -p dist/wq
           cp _build/default/bin/main.exe  dist/wq/wq
+          cp _build/default/LICENSE dist/wq/
+          cp _build/default/README.md dist/wq/
           cd dist
-          tar -cf wq.tar wq
-          gzip wq.tar 
-          echo "FILE_NAME=wq.tar.gz" >> $GITHUB_ENV
-
-      - name: Compress on windows
-        if: matrix.os == 'windows-latest'
-        run: |
-          mkdir dist\wq
-          copy _build\default\bin\main.exe dist\wq\wq
-
-          # Compress using PowerShell's Compress-Archive
-          cd dist
-          Compress-Archive -Path wq -DestinationPath wq.zip
-          echo "FILE_NAME=wq.zip" | Out-File -FilePath $env:GITHUB_ENV -Append
+          tar -cf "wq-${GIT_REF}.tar" wq
+          gzip "wq-{GIT_REF}.tar ""
+          echo "FILE_NAME=wq-${GIT_REF}.tar.gz" >> $GITHUB_ENV
 
       - name: Upload the build artifact 
         uses: actions/upload-artifact@v2
