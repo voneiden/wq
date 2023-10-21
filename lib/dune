@@ -1,7 +1,7 @@
 (library
  (name wq)
- (libraries caqti-type-calendar ppx_rapper_lwt) 
+ (libraries caqti-type-calendar ppx_rapper_lwt)
  (modules Task)
  (inline_tests)
- (preprocess (pps ppx_rapper ppx_inline_test))
- )
+ (preprocess
+  (pps ppx_rapper ppx_inline_test)))
