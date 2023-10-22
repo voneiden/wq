@@ -9,10 +9,20 @@ type db_task = {
   title : string;
   priority : int;
   deadline : Calendar.t option;
+  estimate : Ptime.span option;
   score : float;
 }
+(* TODO: Open/Close *)
 
 type task = { db_task : db_task; start_time : Calendar.t option }
+
+let ptime_span_to_calendar_period (span : Ptime.span option) =
+  Option.bind span (fun span -> Ptime.Span.to_int_s span)
+  |> Option.map (fun seconds -> Calendar.Period.make 0 0 0 0 0 seconds)
+
+let%test _ =
+  ptime_span_to_calendar_period (Some (Ptime.Span.of_int_s 100))
+  = Some (Calendar.Period.make 0 0 0 0 1 40)
 
 let set_calendar_time (time : Calendar.Time.t) (calendar : Calendar.t) =
   Calendar.make (Calendar.year calendar)
@@ -98,7 +108,14 @@ let task_factory (hour : int) =
   {
     start_time = Some (Calendar.make 2023 10 20 hour 0 0);
     db_task =
-      { score = 0.0; deadline = None; priority = 0; id = 1; title = "test" };
+      {
+        score = 0.0;
+        deadline = None;
+        estimate = None;
+        priority = 0;
+        id = 1;
+        title = "test";
+      };
   }
 
 let%test _ = select_earliest_start_time [] = None
@@ -142,6 +159,7 @@ let db_task_factory (hour : int) =
   {
     id = 1;
     deadline = Some (Calendar.make 2023 10 20 hour 0 0);
+    estimate = None;
     title = "";
     priority = 0;
     score = 0.0;
@@ -185,6 +203,7 @@ let list_with_score =
             title, 
             priority, 
             deadline, 
+            estimate,
             created_at,
             pow(pow(2, priority), 2) as p_factor,
             extract(epoch from (now() - created_at)) / 86400.0 as age,
@@ -196,6 +215,7 @@ let list_with_score =
           @string{title}, 
           @int{priority}, 
           @ctime?{deadline}, 
+          @ptime_span?{estimate},
           p_factor * age +
             CASE
               WHEN ttl IS NOT NULL THEN 
