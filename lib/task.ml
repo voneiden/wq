@@ -199,8 +199,8 @@ let insert =
   [%rapper
     execute
       {sql|
-        INSERT INTO task(title, priority)
-        VALUES (%string{title}, %int{priority})
+        INSERT INTO task(title, priority, deadline, estimate)
+        VALUES (%string{title}, %int{priority}, %ctime?{deadline}, %ptime_span?{estimate})
       |sql}]
 
 let list_with_score =

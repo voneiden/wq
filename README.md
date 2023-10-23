@@ -5,6 +5,51 @@ wq is a command line tool for quickly saving and querying todo
 tasks in a postgres database. It ranks tasks dynamically based 
 on priority, age and optional deadlines. 
 
+
+## Creating a task
+
+`wq "Hello World"`
+
+will create task an open task with medium priority and without deadlines, titled "Hello world".
+
+### Adjusting priority
+
+Priority can be adjusted with `-l` (`--low`) and `-h` (`--high`), eg
+
+`wq -h "Hello World"`
+
+will create a high priority task. 
+
+### Setting a deadline
+
+* `-d n` (`--date n`) - set deadline to n, where n can be a number of relative days or YYMMDD
+* `-t hh:mm` (`--time hh:mmm`) - set deadline to specific time
+
+If time is omitted, the default behaviour is to set the time to EOWD (end of work day). To set the time to end of day (23:59:59), use `-e` (`--end`)
+
+### Setting an estimate
+
+* `-e n[dh]` (`--estimate n[dh]`) - set estimate in days or hours (float). Days equal to work days. 
+
+If estimate is omitted, it defaults to 1 hour
+
+### Mark active task as done
+
+`-d` (`--done`)
+
+
+## Viewing tasks
+
+`wq` with no arguments will return the task that is deemed as the most important
+
+### View by index
+
+`wq n` - where n is an integer >0 will view tasks based on score
+
+### Listing tasks
+
+`-a` (`--all`) will list all tasks sorted by score
+
 ## About ranking 
 Task ranking is based on a score. The base score is formed by priority
 and age of the task. The score can be further increased by an impending 
