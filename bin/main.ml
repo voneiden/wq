@@ -11,7 +11,7 @@ let exec_query () =
 
 let main (title : string option) (low : bool) (high : bool) =
   match (title, low, high) with
-  | _, true, true -> print_endline "Can not set low and high priority"
+  | _, true, true -> print_endline "Error: ambiguous priority"
   (* TODO create a new task*)
   | _ -> (
       match Lwt_main.run @@ exec_query () with

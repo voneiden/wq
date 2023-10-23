@@ -11,8 +11,8 @@ type db_task = {
   deadline : Calendar.t option;
   estimate : Ptime.span option;
   score : float;
+  closed : bool;
 }
-(* TODO: Open/Close *)
 
 type task = { db_task : db_task; start_time : Calendar.t option }
 
@@ -111,6 +111,7 @@ let task_factory (hour : int) =
       {
         score = 0.0;
         deadline = None;
+        closed = false;
         estimate = None;
         priority = 0;
         id = 1;
@@ -159,6 +160,7 @@ let db_task_factory (hour : int) =
   {
     id = 1;
     deadline = Some (Calendar.make 2023 10 20 hour 0 0);
+    closed = false;
     estimate = None;
     title = "";
     priority = 0;
@@ -193,6 +195,14 @@ let print_task (row : task) =
       Printf.printf "Returned row id %i with title \"%s\" and score %f\n" id
         title score
 
+let insert =
+  [%rapper
+    execute
+      {sql|
+        INSERT INTO task(title, priority)
+        VALUES (%string{title}, %int{priority})
+      |sql}]
+
 let list_with_score =
   [%rapper
     get_many
@@ -205,16 +215,19 @@ let list_with_score =
             deadline, 
             estimate,
             created_at,
+            closed,
             pow(pow(2, priority), 2) as p_factor,
             extract(epoch from (now() - created_at)) / 86400.0 as age,
             extract(epoch from (deadline - NOW())) / 86400.0 as ttl
           FROM task 
+          WHERE closed = false
         )
         SELECT 
           @int{id}, 
           @string{title}, 
           @int{priority}, 
           @ctime?{deadline}, 
+          @bool{closed},
           @ptime_span?{estimate},
           p_factor * age +
             CASE
