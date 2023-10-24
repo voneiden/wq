@@ -6,6 +6,15 @@ module Span = Timedesc.Span
 module Time = Timedesc.Time
 module Date = Timedesc.Date
 
+type db_config = { timezone : string; day_start : Time.t; day_end : Time.t }
+
+let to_db_config ~timezone ~day_start ~day_end =
+  let day_start = day_start |> Timedesc.Utils.span_of_ptime_span |> Time.of_span
+  and day_end = day_end |> Timedesc.Utils.span_of_ptime_span |> Time.of_span in
+  match (day_start, day_end) with
+  | Some day_start, Some day_end -> Some { timezone; day_start; day_end }
+  | _ -> None
+
 type db_task = {
   id : int;
   title : string;
@@ -272,3 +281,17 @@ let list_with_score =
         |sql}
       function_out]
     to_db_task
+
+let get_config =
+  [%rapper
+    get_one
+      {sql|
+        SELECT 
+          @string{timezone}, 
+          @ptime_span{day_start}, 
+          @ptime_span{day_end}
+        FROM config
+        LIMIT 1
+        |sql}
+      function_out]
+    to_db_config
