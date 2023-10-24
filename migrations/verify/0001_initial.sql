@@ -2,5 +2,5 @@
 
 begin;
 -- verify that we have access to table task
-select * from task limit 1;
+SELECT * FROM task LIMIT 1;
 rollback;

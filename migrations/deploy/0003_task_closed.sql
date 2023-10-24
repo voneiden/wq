@@ -2,6 +2,7 @@
 
 BEGIN;
 
-alter table task add column closed boolean default false not null;
+ALTER TABLE task
+    ADD COLUMN closed BOOLEAN DEFAULT FALSE NOT NULL;
 
 COMMIT;

@@ -2,16 +2,13 @@
 
 BEGIN;
 
-create table task (
-  
-  id serial PRIMARY KEY,
-  
-  title varchar(1000) NOT NULL,
-  priority integer NOT NULL,
-  
-  deadline timestamptz,
-
-  created_at timestamptz NOT NULL DEFAULT NOW()
+CREATE TABLE task
+(
+    id         SERIAL PRIMARY KEY,
+    title      VARCHAR(1000) NOT NULL,
+    priority   INTEGER       NOT NULL,
+    deadline   TIMESTAMPTZ,
+    created_at TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
 
 COMMIT;

@@ -3,6 +3,7 @@
 BEGIN;
 
 -- Remove field estimate from table task
-ALTER TABLE task DROP COLUMN estimate;
+ALTER TABLE task
+    DROP COLUMN estimate;
 
 COMMIT;

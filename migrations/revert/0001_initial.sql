@@ -2,6 +2,6 @@
 
 BEGIN;
 
-drop table task;
+DROP TABLE task;
 
 COMMIT;
