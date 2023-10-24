@@ -12,15 +12,14 @@ bug-reports: "https://github.com/username/reponame/issues"
 depends: [
   "ocaml"
   "dune" {>= "3.11"}
-  "calendar"
   "caqti"
   "caqti-lwt"
   "caqti-driver-postgresql"
-  "caqti-type-calendar"
   "ppx_rapper"
   "ppx_rapper_lwt"
   "cmdliner"
   "ppx_inline_test"
+  "timedesc"
   "ocamlformat" {with-test}
   "odoc" {with-doc}
 ]
