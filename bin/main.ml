@@ -29,33 +29,47 @@ let parse_pos (pos : string list) =
       (None, Some (int_of_string index))
   | _ -> (Some (String.concat " " pos), None)
 
+let list_tasks cfg =
+  match Lwt_main.run @@ exec_query (Task.list_with_score ()) with
+  | Error err ->
+      print_endline "Oops, we encountered an error!";
+      print_endline (Caqti_error.show err)
+  | Ok rows ->
+      let tasks = Task.to_tasks cfg rows in
+      List.iter Task.print_task tasks;
+      Task.print_most_important tasks
+
+let insert_task title low high deadline estimate =
+  match
+    Lwt_main.run
+    @@ exec_query
+         (Task.insert ~title
+            ~priority:(priority_flags_to_priority_int low high)
+            ~deadline:(parse_deadline deadline)
+            ~estimate:(parse_estimate estimate))
+  with
+  | Error err ->
+      print_endline "Oops, we encountered an error!";
+      print_endline (Caqti_error.show err)
+  | Ok () -> print_endline "oke"
+
+let get_config () =
+  match Lwt_main.run @@ exec_query (Task.get_config ()) with
+  | Error err ->
+      print_endline "Failed to get config";
+      print_endline (Caqti_error.show err);
+      None
+  | Ok cfg -> cfg
+
 let main (pos : string list) (low : bool) (high : bool)
     (deadline : string option) (estimate : float option) =
-  match (parse_pos pos, low, high) with
-  | _, true, true -> print_endline "Error: ambiguous priority"
-  | (Some title, _), _, _ -> (
-      match
-        Lwt_main.run
-        @@ exec_query
-             (Task.insert ~title
-                ~priority:(priority_flags_to_priority_int low high)
-                ~deadline:(parse_deadline deadline)
-                ~estimate:(parse_estimate estimate))
-      with
-      | Error err ->
-          print_endline "Oops, we encountered an error!";
-          print_endline (Caqti_error.show err)
-      | Ok () -> print_endline "oke")
-  | (_, Some _), _, _ -> print_endline "Not supported"
-  | _ -> (
-      match Lwt_main.run @@ exec_query (Task.list_with_score ()) with
-      | Error err ->
-          print_endline "Oops, we encountered an error!";
-          print_endline (Caqti_error.show err)
-      | Ok rows ->
-          let tasks = Task.to_tasks rows in
-          List.iter Task.print_task tasks;
-          Task.print_most_important tasks)
+  let cfg = get_config () in
+  match (cfg, parse_pos pos, low, high) with
+  | None, _, _, _ -> ()
+  | _, _, true, true -> print_endline "Error: ambiguous priority"
+  | _, (Some title, _), _, _ -> insert_task title low high deadline estimate
+  | _, (_, Some _), _, _ -> print_endline "Not supported"
+  | Some cfg, _, _, _ -> list_tasks cfg
 
 let arg_pos =
   let doc =

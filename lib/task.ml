@@ -116,10 +116,10 @@ let deadline_or_override (deadline : Timestamp.t option)
   | Some deadline, None -> Some deadline
   | _ -> None
 
-let determine_start_time (end_time : Timestamp.t) : Timestamp.t =
-  subtract_work_time (make_time 8 0 0)
-    (make_time 16 0 0) (* TODO make configurable*)
-    (make_time_span 1 0 0) (* TODO: make dynamic*)
+let determine_start_time cfg (estimate : Span.t option) (end_time : Timestamp.t)
+    : Timestamp.t =
+  subtract_work_time cfg.day_start cfg.day_end
+    (Option.value estimate ~default:(make_time_span 1 0 0))
     end_time
 
 let sort_optional (getter : 'a -> 'b option) (compare : 'b -> 'b -> int)
@@ -176,7 +176,7 @@ let select_most_important (now : Timestamp.t) (tasks : task list) : task option
       | hd :: _ -> Some hd
       | _ -> None)
 
-let to_tasks (db_tasks : db_task list) : task list =
+let to_tasks cfg (db_tasks : db_task list) : task list =
   db_tasks
   |> List.sort
        (sort_optional (fun db_task -> db_task.deadline) Timestamp.compare)
@@ -184,7 +184,8 @@ let to_tasks (db_tasks : db_task list) : task list =
   |> List.fold_left_map
        (fun previous_start db_task ->
          let start_time =
-           Option.map determine_start_time
+           Option.map
+             (determine_start_time cfg db_task.estimate)
              (deadline_or_override db_task.deadline previous_start)
          in
          (start_time, { db_task; start_time }))
@@ -202,10 +203,17 @@ let db_task_factory (hour : int) =
     score = 0.0;
   }
 
-let%test _ = to_tasks [] = []
+let db_config_factory () =
+  {
+    timezone = "Europe/Helsinki";
+    day_start = make_time 8 0 0;
+    day_end = make_time 16 0 0;
+  }
+
+let%test _ = to_tasks (db_config_factory ()) [] = []
 
 let%test _ =
-  to_tasks [ db_task_factory 10 ]
+  to_tasks (db_config_factory ()) [ db_task_factory 10 ]
   = [
       {
         start_time = Some (make_timestamp 2023 10 20 9 0 0);
