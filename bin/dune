@@ -1,6 +1,12 @@
 (executable
  (public_name wq)
  (name main)
- (libraries wq cmdliner ppx_rapper_lwt caqti-lwt caqti-driver-postgresql)
+ (libraries
+  wq
+  cmdliner
+  ppx_rapper_lwt
+  caqti-lwt
+  caqti-driver-postgresql
+  timedesc)
  (preprocess
   (pps ppx_rapper)))

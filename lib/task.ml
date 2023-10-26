@@ -5,6 +5,7 @@ module Timestamp = Timedesc.Timestamp
 module Span = Timedesc.Span
 module Time = Timedesc.Time
 module Date = Timedesc.Date
+open Util
 
 type db_config = { timezone : string; day_start : Time.t; day_end : Time.t }
 
@@ -25,15 +26,6 @@ type db_task = {
   closed : bool;
 }
 
-let make_timestamp year month day hour minute second =
-  Timedesc.to_timestamp_single
-  @@ Timedesc.make_exn ~tz ~year ~month ~day ~hour ~minute ~second ()
-
-let make_time hour minute second = Time.make_exn ~hour ~minute ~second ()
-
-let make_time_span hour minute second =
-  Time.to_span @@ make_time hour minute second
-
 let to_db_task ~id ~title ~priority ~deadline ~estimate ~closed ~score =
   {
     id;
@@ -47,16 +39,17 @@ let to_db_task ~id ~title ~priority ~deadline ~estimate ~closed ~score =
 
 type task = { db_task : db_task; start_time : Timestamp.t option }
 
+let span_to_ptime span =
+  span
+  |> Span.add
+       (Timedesc.to_timestamp_single (Timedesc.now ~tz_of_date_time:tz ()))
+  |> Timedesc.Utils.ptime_of_timestamp
+
 let timestamp_add_days days (timestamp : Timestamp.t) =
   let datetime = Timedesc.of_timestamp_exn ~tz_of_date_time:tz timestamp in
   Timedesc.of_date_and_time_exn
     (Date.add ~days (Timedesc.date datetime))
     (Timedesc.time datetime)
-  |> Timedesc.to_timestamp_single
-
-let set_timestamp_time (time : Time.t) (timestamp : Timestamp.t) =
-  let datetime = Timedesc.of_timestamp_exn ~tz_of_date_time:tz timestamp in
-  Timedesc.of_date_and_time_exn ~tz (Timedesc.date datetime) time
   |> Timedesc.to_timestamp_single
 
 let%test _ =
@@ -224,7 +217,7 @@ let%test _ =
 let print_most_important (tasks : task list) =
   match select_most_important (Timestamp.now ()) tasks with
   | Some { db_task = { id; title; _ }; _ } ->
-      Printf.printf "The most important task (id=%i): %s" id title
+      Printf.printf "The most important task (id=%i): %s\n" id title
   | None -> Printf.printf "Nothing to do!"
 
 let print_task (row : task) =

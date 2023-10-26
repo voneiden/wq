@@ -1,5 +1,8 @@
 open Cmdliner
 module Task = Wq.Task
+module Time = Timedesc.Span
+module Span = Timedesc.Span
+module Parse = Wq.Parse
 
 let connect () =
   Caqti_lwt.connect @@ Uri.of_string "postgresql://wq@localhost/wq"
@@ -11,12 +14,6 @@ let exec_query query =
 
 let priority_flags_to_priority_int low high =
   match (low, high) with true, false -> 0 | false, true -> 2 | _ -> 1
-
-(* TODO*)
-let parse_deadline _ = None
-
-(* TODO*)
-let parse_estimate _ = None
 
 let parse_pos (pos : string list) =
   match pos with
@@ -39,14 +36,20 @@ let list_tasks cfg =
       List.iter Task.print_task tasks;
       Task.print_most_important tasks
 
-let insert_task title low high deadline estimate =
+let insert_task (cfg : Task.db_config) title low high deadline estimate =
   match
     Lwt_main.run
     @@ exec_query
          (Task.insert ~title
             ~priority:(priority_flags_to_priority_int low high)
-            ~deadline:(parse_deadline deadline)
-            ~estimate:(parse_estimate estimate))
+            ~deadline:
+              (Option.bind
+                 (Parse.parse_deadline cfg.day_end deadline)
+                 Timedesc.Utils.ptime_of_timestamp)
+            ~estimate:
+              (Option.bind
+                 (Option.bind estimate Parse.parse_duration)
+                 Timedesc.Utils.ptime_span_of_span))
   with
   | Error err ->
       print_endline "Oops, we encountered an error!";
@@ -62,12 +65,13 @@ let get_config () =
   | Ok cfg -> cfg
 
 let main (pos : string list) (low : bool) (high : bool)
-    (deadline : string option) (estimate : float option) =
+    (deadline : string option) (estimate : string option) =
   let cfg = get_config () in
   match (cfg, parse_pos pos, low, high) with
-  | None, _, _, _ -> ()
+  | None, _, _, _ -> print_endline "Error: could not get config"
   | _, _, true, true -> print_endline "Error: ambiguous priority"
-  | _, (Some title, _), _, _ -> insert_task title low high deadline estimate
+  | Some cfg, (Some title, _), _, _ ->
+      insert_task cfg title low high deadline estimate
   | _, (_, Some _), _, _ -> print_endline "Not supported"
   | Some cfg, _, _, _ -> list_tasks cfg
 
@@ -97,11 +101,14 @@ let arg_deadline =
   Arg.(
     value
     & opt (some string) None
-    & info [ "d"; "date" ] ~docv:"YYMMDD[THH[:MM[:SS]]]" ~doc)
+    & info [ "d"; "deadline" ] ~docv:"[YY]MMDD or n[h|d]" ~doc)
 
 let arg_estimate_hours =
-  let doc = "Estimate (hours)" in
-  Arg.(value & opt (some float) None & info [ "e"; "estimate" ] ~docv:"n" ~doc)
+  let doc = "Estimate" in
+  Arg.(
+    value
+    & opt (some string) None
+    & info [ "e"; "estimate" ] ~docv:"n[h|d]" ~doc)
 
 (* TODO deadline and estimate args *)
 let main_t =

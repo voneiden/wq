@@ -22,7 +22,7 @@ will create a high priority task.
 
 ### Setting a deadline
 
-* `-d n` (`--date n`) - set deadline to n, where n can be a number of relative days or YYMMDD
+* `-d n` (`--deadline n`) - set deadline to n, where n can be a number of relative days or YYMMDD
 * `-t hh:mm` (`--time hh:mmm`) - set deadline to specific time
 
 If time is omitted, the default behaviour is to set the time to EOWD (end of work day). To set the time to end of day (23:59:59), use `-e` (`--end`)
