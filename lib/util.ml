@@ -1,4 +1,5 @@
 module Date = Timedesc.Date
+module Span = Timedesc.Span
 module Time = Timedesc.Time
 module Timestamp = Timedesc.Timestamp
 
@@ -12,7 +13,8 @@ let make_timestamp year month day hour minute second =
 let make_time hour minute second = Time.make_exn ~hour ~minute ~second ()
 
 let make_time_span hour minute second =
-  Time.to_span @@ make_time hour minute second
+  (* Time.to_span @@ make_time hour minute second *)
+  Span.make ~s:(Int64.of_int (second + (minute * 60) + (hour * 3600))) ()
 
 let make_date year month day = Date.Ymd.make_exn ~year ~month ~day
 let now () = Timedesc.now ~tz_of_date_time:tz ()

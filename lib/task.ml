@@ -263,7 +263,7 @@ let print_prefix index priority deadline =
 
   match (index, String.concat "" [ string_priority; string_deadline ]) with
   | "", "" -> ""
-  | "", tl -> Printf.sprintf "[%s%s]" tl (print_padding "" priority deadline)
+  | "", tl -> Printf.sprintf "[%s%s]" (print_padding "" priority deadline) tl
   | hd, "" -> Printf.sprintf "[%s%s]" hd (print_padding hd priority deadline)
   | hd, tl ->
       Printf.sprintf "[%s%s%s]" hd (print_padding hd priority deadline) tl
