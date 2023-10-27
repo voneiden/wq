@@ -1,0 +1,9 @@
+-- Deploy wq:0005_lock to pg
+
+BEGIN;
+
+
+ALTER TABLE task
+    ADD COLUMN locked BOOLEAN DEFAULT FALSE NOT NULL;
+
+COMMIT;

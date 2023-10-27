@@ -6,3 +6,4 @@
 0002_estimate 2023-10-21T21:55:22Z Matti Eiden <snaipperi@gmail.com> # This adds an estimate to the task table
 0003_task_closed 2023-10-23T10:24:38Z Matti Eiden <snaipperi@gmail.com> # Add task.closed boolean field
 0004_config 2023-10-24T20:34:33Z Matti Eiden <snaipperi@gmail.com> # Add a configuration table for the app
+0005_lock 2023-10-27T07:58:28Z Matti Eiden <snaipperi@gmail.com> # Ability to lock a task

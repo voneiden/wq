@@ -1,11 +1,9 @@
 -- Verify wq:0003_task_closed on pg
-
-BEGIN;
-
-SELECT EXISTS (SELECT 1
+DO $$
+BEGIN
+ASSERT (SELECT EXISTS (SELECT 1
                FROM information_schema.columns
-               WHERE table_schema = 'wq'
+               WHERE table_schema = 'public'
                  AND table_name = 'task'
-                 AND column_name = 'closed');
-
-ROLLBACK;
+                 AND column_name = 'closed'));
+END $$;
