@@ -19,7 +19,7 @@
  (name wq)
  (synopsis "A short synopsis")
  (description "A longer description")
- (depends ocaml dune caqti caqti-lwt caqti-driver-postgresql ppx_rapper ppx_rapper_lwt cmdliner ppx_inline_test timedesc (ocamlformat :with-test) )
+ (depends ocaml dune caqti caqti-lwt caqti-driver-postgresql ppx_rapper ppx_rapper_lwt cmdliner ppx_inline_test ppx_assert ppx_expect timedesc (ocamlformat :with-test) )
  (tags
   (topics "to describe" your project)))
 

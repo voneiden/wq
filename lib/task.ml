@@ -58,7 +58,7 @@ let%test _ =
     (Timedesc.make_exn ~tz ~year:2023 ~month:10 ~day:19 ~hour:8 ~minute:0
        ~second:0 ()
     |> Timedesc.to_timestamp_single)
-  = (Timedesc.make_exn ~year:2023 ~month:10 ~day:19 ~hour:16 ~minute:59
+  = (Timedesc.make_exn ~tz ~year:2023 ~month:10 ~day:19 ~hour:16 ~minute:59
        ~second:45 ()
     |> Timedesc.to_timestamp_single)
 
