@@ -6,6 +6,16 @@ tasks in a postgres database. It ranks tasks dynamically based
 on priority, age and optional deadlines. 
 
 
+## TODO
+* Closing tasks
+* Clean output
+* Check docs, mention sqitch
+
+## TODO next level
+* "Lock" task to top of list
+* Edit tasks
+
+
 ## Creating a task
 
 `wq "Hello World"`

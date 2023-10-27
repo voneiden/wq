@@ -13,8 +13,8 @@ let to_db_config ~timezone ~day_start ~day_end =
   let day_start = day_start |> Timedesc.Utils.span_of_ptime_span |> Time.of_span
   and day_end = day_end |> Timedesc.Utils.span_of_ptime_span |> Time.of_span in
   match (day_start, day_end) with
-  | Some day_start, Some day_end -> Some { timezone; day_start; day_end }
-  | _ -> None
+  | Some day_start, Some day_end -> Ok { timezone; day_start; day_end }
+  | _ -> Error "Error: Config has inconsistent day_start / day_end"
 
 type db_task = {
   id : int;
@@ -115,6 +115,10 @@ let determine_start_time cfg (estimate : Span.t option) (end_time : Timestamp.t)
     (Option.value estimate ~default:(make_time_span 1 0 0))
     end_time
 
+let sort (getter : 'a -> 'b) (compare : 'b -> 'b -> int) (o1 : 'a) (o2 : 'a) :
+    int =
+  compare (getter o1) (getter o2)
+
 let sort_optional (getter : 'a -> 'b option) (compare : 'b -> 'b -> int)
     (o1 : 'a) (o2 : 'a) : int =
   match (getter o1, getter o2) with
@@ -169,21 +173,36 @@ let select_most_important (now : Timestamp.t) (tasks : task list) : task option
       | hd :: _ -> Some hd
       | _ -> None)
 
-let to_tasks cfg (db_tasks : db_task list) : task list =
-  db_tasks
-  |> List.sort
-       (sort_optional (fun db_task -> db_task.deadline) Timestamp.compare)
-  |> List.rev
-  |> List.fold_left_map
-       (fun previous_start db_task ->
-         let start_time =
-           Option.map
-             (determine_start_time cfg db_task.estimate)
-             (deadline_or_override db_task.deadline previous_start)
-         in
-         (start_time, { db_task; start_time }))
-       None
-  |> snd
+let should_order_by_start_time now (task : task) =
+  match task.start_time with Some start_time -> start_time <= now | _ -> false
+
+let to_tasks now cfg (db_tasks : db_task list) : task list =
+  let order_by_start_time, order_by_score =
+    db_tasks
+    |> List.sort
+         (sort_optional (fun db_task -> db_task.deadline) Timestamp.compare)
+    |> List.rev
+    |> List.fold_left_map
+         (fun previous_start db_task ->
+           let start_time =
+             Option.map
+               (determine_start_time cfg db_task.estimate)
+               (deadline_or_override db_task.deadline previous_start)
+           in
+           (start_time, { db_task; start_time }))
+         None
+    |> snd
+    |> List.partition (should_order_by_start_time now)
+  in
+  List.concat
+    [
+      order_by_start_time
+      |> List.sort
+           (sort_optional (fun task -> task.start_time) Timestamp.compare);
+      order_by_score
+      |> List.sort (sort (fun task -> task.db_task.score) Float.compare)
+      |> List.rev;
+    ]
 
 let db_task_factory (hour : int) =
   {
@@ -203,10 +222,14 @@ let db_config_factory () =
     day_end = make_time 16 0 0;
   }
 
-let%test _ = to_tasks (db_config_factory ()) [] = []
+let%test _ =
+  to_tasks (make_timestamp 2023 10 27 22 22 22) (db_config_factory ()) [] = []
 
 let%test _ =
-  to_tasks (db_config_factory ()) [ db_task_factory 10 ]
+  to_tasks
+    (make_timestamp 2023 10 27 22 22 22)
+    (db_config_factory ())
+    [ db_task_factory 10 ]
   = [
       {
         start_time = Some (make_timestamp 2023 10 20 9 0 0);
@@ -220,21 +243,35 @@ let print_most_important (tasks : task list) =
       Printf.printf "The most important task (id=%i): %s\n" id title
   | None -> Printf.printf "Nothing to do!"
 
-let print_task (row : task) =
+let print_index index = if index >= 0 then Printf.sprintf "%i" index else ""
+
+(* TODO test ANSI colors like \027[31m *)
+let print_priority_symbol priority =
+  match priority with 2 -> "⇑" | 0 -> "⇣" | _ -> ""
+
+let deadline_symbol deadline = match deadline with None -> "" | Some _ -> "⏱"
+
+let print_padding tl priority deadline =
+  let priority = if priority == 2 || priority == 0 then 1 else 0
+  and deadline = if Option.is_some deadline then 1 else 0 in
+  String.make (5 - (String.length tl + priority + deadline)) ' '
+
+let print_prefix index priority deadline =
+  let index = print_index index
+  and string_priority = print_priority_symbol priority
+  and string_deadline = deadline_symbol deadline in
+
+  match (index, String.concat "" [ string_priority; string_deadline ]) with
+  | "", "" -> ""
+  | "", tl -> Printf.sprintf "[%s%s]" tl (print_padding "" priority deadline)
+  | hd, "" -> Printf.sprintf "[%s%s]" hd (print_padding hd priority deadline)
+  | hd, tl ->
+      Printf.sprintf "[%s%s%s]" hd (print_padding hd priority deadline) tl
+
+let print_task (index : int) (row : task) =
   match row with
-  | {
-   db_task = { id; title; score; deadline = Some deadline; _ };
-   start_time = Some start_time;
-  } ->
-      Printf.printf
-        "Returned row id %i with title \"%s\" and score %f -- start at %s \
-         (deadline at %s)\n"
-        id title score
-        (Timestamp.to_string start_time)
-        (Timestamp.to_string deadline)
-  | { db_task = { id; title; score; _ }; _ } ->
-      Printf.printf "Returned row id %i with title \"%s\" and score %f\n" id
-        title score
+  | { db_task = { title; priority; deadline; _ }; _ } ->
+      Printf.printf "%s %s\n" (print_prefix index priority deadline) title
 
 let insert =
   [%rapper
@@ -242,6 +279,24 @@ let insert =
       {sql|
         INSERT INTO task(title, priority, deadline, estimate)
         VALUES (%string{title}, %int{priority}, %ptime?{deadline}, %ptime_span?{estimate})
+      |sql}]
+
+let toggle_closed =
+  [%rapper
+    execute
+      {sql|
+        UPDATE task
+        SET closed = NOT closed
+        WHERE id = %int{id}
+      |sql}]
+
+let toggle_locked =
+  [%rapper
+    execute
+      {sql|
+        UPDATE task
+        SET locked = NOT locked
+        WHERE id = %int{id}
       |sql}]
 
 let list_with_score =
